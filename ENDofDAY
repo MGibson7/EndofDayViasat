@@ -1,0 +1,266 @@
+import datetime
+import pandas as pd
+today = datetime.date.today().strftime('%m/%d/%Y')
+temp = pd.Timestamp(today)
+day_of_week = (temp.day_name())
+print(day_of_week)
+import sys
+#if day_of_week == 'Sunday':
+    #sys.exit()
+
+
+import pandas as pd
+original = pd.read_excel('todayjobs.xlsx')
+print(original)
+import datetime
+today = datetime.date.today().strftime('%m/%d/%Y')
+
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.keys import Keys
+
+options = webdriver.ChromeOptions()
+options.add_argument("--start-maximized")
+prefs = {"profile.default_content_settings.popups": 0,
+             "download.default_directory":
+                        r"C:\Users\thegi\PycharmProjects\viasat_end_day_reports\\",
+             "directory_upgrade": True}
+options.add_experimental_option("prefs", prefs)
+
+driver = webdriver.Chrome(executable_path=r'C:\Users\thegi\PycharmProjects\viasat_end_day_reports\chromedriver.exe', options = options)
+
+
+from selenium.webdriver.common.keys import Keys
+import time
+
+driver.maximize_window()
+driver.get("https://fulfillment.wildblue.net")
+time.sleep(7)
+
+#x = input("user name")
+#y = input("password")
+
+elem = driver.find_element_by_name('j_username')
+elem.send_keys("INSERT USERNAME")
+elem = driver.find_element_by_name('j_password')
+elem.send_keys("INSERT PASSWORD")
+elem = driver.find_element_by_name('submit')
+elem.click()
+
+#Go to Schedule Date
+driver.get("https://fulfillment.wildblue.net/fsm-fe/fsm/browseOrder/browseOrder.page?execution=e3s1")
+try:
+    elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:createdDateFilter:j_idt172") or driver.find_element_by_id("browseOrder:orderGrid:filterBoard:createdDateFilter:j_idt206")
+    elem.click()
+except NoSuchElementException:
+    elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:createdDateFilter:j_idt189")
+    elem.click()
+
+elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:completedDateFilter:dateFromCal_input")
+elem.click()
+elem.send_keys(today)
+elem.send_keys(Keys.TAB)
+elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:completedDateFilter:dateToCal_input")
+elem.click()
+elem.send_keys(today)
+elem = driver.find_element_by_id('browseOrder:orderGrid:search')
+elem.click()
+time.sleep(22)
+elem = driver.find_element_by_name('browseOrder:xlsExport')
+elem.click()
+time.sleep(17)
+import pandas as pd
+df_2 = pd.DataFrame()
+import os
+
+path = r'C:\Users\thegi\PycharmProjects\viasat_end_day_reports\\'
+
+files = []
+# r=root, d=directories, f = files
+for r, d, f in os.walk(path):
+    for file in f:
+        if '.XLS' in file:
+            files.append(os.path.join(r, file))
+        else:
+            df_2['FSM'] = []
+            df_2['Type'] = []
+            df_2['Status'] = []
+            df_2['Notes'] = []
+            df_2.to_excel(r'C:\Users\thegi\PycharmProjects\viasat_end_day_reports\\nonecomplete.xlsx', index=False, header=True)
+            a = 'nonecomplete.xlsx'
+
+for f in files:
+    a = f
+
+print(a)
+import pandas as pd
+
+original = pd.read_excel('todayjobs.XLSX')
+
+
+
+#This file will be scraped from the web
+completed = pd.read_excel(a)
+
+eod = pd.DataFrame()
+
+eod['FSM'] = []
+eod['Type'] = []
+eod['Status'] = []
+eod['Notes'] = []
+
+x = 0
+number_of_jobs = len(completed)
+
+#change c to text so it displays properly in html table
+while number_of_jobs != 0:
+    c = (completed.iloc[x,0])
+    e = (completed.iloc[x,8])
+    d = (completed.iloc[x,9])
+    eod = eod.append({'FSM': str(c), 'Type':e, 'Status':d, 'Notes':'n/a'}, ignore_index=True)
+    x = x +1
+    number_of_jobs = number_of_jobs -1
+
+#print(eod)
+
+original_jobs = len(original)
+original_install = len(original)
+eod_jobs = len(eod)
+completed_jobs = len(eod)
+eod_job_list = []
+x = 0
+
+#Change text back to numbers so it can be compared
+for number in range(eod_jobs):
+    z = eod.iloc[x,0]
+    z = int(z)
+    eod_job_list.append(z)
+    x = x + 1
+
+#print(eod_job_list)
+
+missing_jobs = []
+missing_job_types = []
+x = 0
+while original_jobs != 0:
+    if original.iloc[x,0] not in eod_job_list:
+        c = original.iloc[x, 0]
+        d = original.iloc[x,1]
+        missing_jobs.append(c)
+        missing_job_types.append(d)
+    original_jobs = original_jobs - 1
+    x = x -1
+
+#print(missing_jobs)
+
+num_missing_jobs = len(missing_jobs)
+#print(num_missing_jobs)
+x = 0
+
+# CLEAR THE BOARD (IDS DONT STAY THE SAME NEXT TIME THROUGH AND NO NEED TO KEEP CLEARING DATES ALREADY CLEARED
+driver.get("https://fulfillment.wildblue.net/fsm-fe/fsm/browseOrder/browseOrder.page?execution=e3s1")
+elem = driver.find_element_by_id("browseOrder:orderGrid:clearFilters")
+elem.click()
+time.sleep(7)
+
+#MISSING JOB ADD STATUSES AND NOTES SCRAPED
+for number in range(num_missing_jobs):
+    driver.get("https://fulfillment.wildblue.net/fsm-fe/fsm/browseOrder/browseOrder.page?execution=e3s1")
+    time.sleep(10)
+    missing_job = missing_jobs[x]
+    missing_job_type = missing_job_types[x]
+    print(missing_job)
+    missing_job = str(missing_job)
+    elem = driver.find_element_by_id("browseOrder:orderGrid:clearFilters")
+    elem.click()
+    time.sleep(7)
+    try:
+        elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:fsmIdFilter:idFilterValueInput")
+    except NoSuchElementException:
+        elem = driver.find_element_by_id("filterBoard:fsmIdFilter:idFilterValueInput")
+    elem.send_keys(missing_job)
+    time.sleep(3)
+    elem = driver.find_element_by_id('browseOrder:orderGrid:search')
+    elem.click()
+    #time.sleep(7)
+    #from selenium.webdriver.common.keys import Keys
+    #Keys.ENTER
+    #time.sleep(2)
+    #Keys.ENTER
+    time.sleep(7)
+    elem = driver.find_element_by_id("browseOrder:orderGrid:gridTable:0:orderLink")
+    elem.click()
+    time.sleep(9)
+    try:
+        status_of_job = driver.find_element_by_id("basicDataFormId:changeStatusSelectMenu_label")
+        status_of_job = status_of_job.text
+        print(status_of_job)
+    except NoSuchElementException:
+        status_of_job = driver.find_element_by_id("basicDataFormIdSmall:changeStatusSelectMenuSmall_label")
+        status_of_job = status_of_job.text
+        print(status_of_job)
+    if status_of_job == 'Pending cancel':
+        status = 'canceled'
+    elif status_of_job == 'Customer Delay':
+        status = 'On hold'
+    elif status_of_job == 'Completed':
+        status = 'Completed'
+    else:
+        status = 'Rescheduled or needs reschedule'
+    try:
+        notes_on_job = driver.find_element_by_xpath('//*[@id="noteForm:j_idt1571:notesTable_data"]/tr[1]/td')
+        notes_on_job = notes_on_job.text
+        print(notes_on_job)
+    except NoSuchElementException:
+        notes_on_job = driver.find_element_by_xpath('//*[@id="noteForm:j_idt1621:notesTable_data"]/tr[1]/td/pre')
+        notes_on_job = notes_on_job.text
+        print(notes_on_job)
+
+    x = x + 1
+    eod = eod.append({'FSM': missing_job, 'Type':missing_job_type, 'Status':status, 'Notes':notes_on_job}, ignore_index=True)
+
+print(eod)
+
+#EMAIL THE MESS OVER TO ME
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+
+
+
+msg = MIMEMultipart()
+msg['From'] = 'am013viasatreporting@gmail.com'
+msg['To'] = 'INSERT EMAIL HERE'
+msg['Cc'] = 'mgibsonasc@gmail.com'
+msg['Bcc'] = 'mgibsonasc@gmail.com'
+msg['Subject'] = f'End of Day Work Order Report AM013 {today}'
+html_table = eod.to_html()
+message = MIMEMultipart("alternative")
+html = f'{html_table}'
+text = f"""\
+    Hey guys below are the results for today's work orders, along with the accompanying notes. 
+    Please let me know if you have any questions or comments.
+    AM013 END OF DAY REPORT - Michael Gibson
+    """
+part_1 = MIMEText(text, "plain")
+part_2 = MIMEText(html, "html")
+msg.attach(part_1)
+msg.attach(part_2)
+
+mailserver = smtplib.SMTP('smtp.gmail.com', 587)
+# identify ourselves to smtp gmail client
+mailserver.ehlo()
+# secure our email with tls encryption
+mailserver.starttls()
+# re-identify ourselves as an encrypted connection
+mailserver.ehlo()
+mailserver.login('am013viasatreporting@gmail.com', 'InsertPasswordHere!')
+
+
+mailserver.send_message(msg)
+
+
+mailserver.quit()
+
+os.remove(a)
