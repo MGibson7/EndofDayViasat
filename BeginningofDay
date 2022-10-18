@@ -1,0 +1,155 @@
+#Scrape FSM Data at Start of the day, clean it, and save new file ALL JOBS
+
+import pandas as pd
+import datetime
+
+#Start by getting today's date
+today = datetime.date.today().strftime('%m/%d/%Y')
+temp = pd.Timestamp(today)
+day_of_week = (temp.day_name())
+print(day_of_week)
+import sys
+if day_of_week == 'Sunday':
+    sys.exit()
+
+
+from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.keys import Keys
+
+options = webdriver.ChromeOptions()
+options.add_argument("--start-maximized")
+prefs = {"profile.default_content_settings.popups": 0,
+             "download.default_directory":
+                        r"C:\Users\thegi\PycharmProjects\viasat_end_day_reports\\",
+             "directory_upgrade": True}
+options.add_experimental_option("prefs", prefs)
+
+driver = webdriver.Chrome(executable_path=r'C:\Users\thegi\PycharmProjects\viasat_end_day_reports\chromedriver.exe', options = options)
+
+start_date = today
+
+end_date = today
+
+import time
+
+driver.maximize_window()
+driver.get("https://fulfillment.wildblue.net")
+time.sleep(5)
+
+#x = input("user name")
+#y = input("password")
+
+elem = driver.find_element_by_name('j_username')
+elem.send_keys("INSERT USERNAME")
+elem = driver.find_element_by_name('j_password')
+elem.send_keys("INSERT PASSWORD")
+elem = driver.find_element_by_name('submit')
+elem.click()
+
+#Go to Schedule Date
+driver.get("https://fulfillment.wildblue.net/fsm-fe/fsm/browseOrder/browseOrder.page?execution=e3s1")
+
+try:
+    elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:createdDateFilter:j_idt172") or driver.find_element_by_id("browseOrder:orderGrid:filterBoard:createdDateFilter:j_idt172")
+    elem.click()
+except NoSuchElementException:
+    elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:createdDateFilter:j_idt189")
+    elem.click()
+
+
+elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:scheduledDateFilter:dateFromCal_input")
+elem.click()
+elem.send_keys(start_date)
+elem.send_keys(Keys.TAB)
+elem = driver.find_element_by_id("browseOrder:orderGrid:filterBoard:scheduledDateFilter:dateToCal_input")
+elem.click()
+elem.send_keys(end_date)
+elem = driver.find_element_by_id('browseOrder:orderGrid:search')
+elem.click()
+time.sleep(17)
+elem = driver.find_element_by_name('browseOrder:xlsExport')
+elem.click()
+driver.minimize_window()
+time.sleep(17)
+
+import os
+
+path = r'C:\Users\thegi\PycharmProjects\viasat_end_day_reports\\'
+
+files = []
+# r=root, d=directories, f = files
+for r, d, f in os.walk(path):
+    for file in f:
+        if '.XLS' in file:
+            files.append(os.path.join(r, file))
+
+for f in files:
+    print(f)
+
+df = pd.read_excel(f)
+
+df_2 = pd.DataFrame()
+
+df_2['FSM'] = []
+df_2['Type'] = []
+df_2['Status'] = []
+df_2['Notes'] = []
+
+#Total Number of Jobs
+x = 0
+number_of_jobs = len(df)
+
+while number_of_jobs != 0:
+    print(df.iloc[x,8])
+    if df.iloc[x,9] != "Completed":
+        c = (df.iloc[x,0])
+        d = (df.iloc[x,8])
+        df_2 = df_2.append({'FSM': c, 'Type': d}, ignore_index=True)
+    x = x +1
+    number_of_jobs = number_of_jobs -1
+
+print(df_2)
+
+
+os.remove(f)
+
+df_2.to_excel (r'C:\Users\thegi\PycharmProjects\viasat_end_day_reports\\todayjobs.xlsx', index = False, header=True)
+
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
+msg = MIMEMultipart()
+msg['From'] = 'am013viasatreporting@gmail.com'
+msg['To'] = 'InsertEmailHere'
+msg['Cc'] = 'mgibsonasc@gmail.com'
+msg['Bcc'] = 'am013viasatreporting@gmail.com'
+msg['Subject'] = f'Beginning Day Work Order Forecast/Issues AM013 {today}'
+message = MIMEMultipart("alternative")
+text = f"""\
+Hey Ty everything is looking good on our jobs for today and tomorrow barring anything unforeseen (customer cancels, NLOS, same day vehicle issue etc.).
+We have no known issues with completing any of the work today or tomorrow at this time.
+    
+Thanks!
+
+Michael Gibson
+American Communications 
+    """
+part_1 = MIMEText(text, "plain")
+msg.attach(part_1)
+
+mailserver = smtplib.SMTP('smtp.gmail.com', 587)
+# identify ourselves to smtp gmail client
+mailserver.ehlo()
+# secure our email with tls encryption
+mailserver.starttls()
+# re-identify ourselves as an encrypted connection
+mailserver.ehlo()
+mailserver.login('am013viasatreporting@gmail.com', 'PasswordHere')
+
+
+mailserver.send_message(msg)
+
+
+mailserver.quit()
